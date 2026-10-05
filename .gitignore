@@ -1,0 +1,18 @@
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments and generated files
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# User-uploaded ticket attachments
+app/static/adjuntos/*
+!app/static/adjuntos/.gitkeep
+
+# Logs
+*.log

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/static/gotuplas.png">
+    <title>{% block title %}Help Desk{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+    <style>
+        .sidebar-link.active { background-color: #4f46e5; color: white; }
+        .badge-abierto     { background:#dbeafe; color:#1d4ed8; }
+        .badge-en_proceso  { background:#fef9c3; color:#92400e; }
+        .badge-resuelto    { background:#dcfce7; color:#166534; }
+        .badge-cerrado     { background:#f3f4f6; color:#374151; }
+        .badge-baja        { background:#f0fdf4; color:#15803d; }
+        .badge-media       { background:#fefce8; color:#a16207; }
+        .badge-alta        { background:#fff7ed; color:#c2410c; }
+        .badge-critica     { background:#fef2f2; color:#b91c1c; }
+
+        #sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+        }
+        #sidebar.open { transform: translateX(0); }
+
+        @media (min-width: 1024px) {
+            #sidebar { transform: translateX(0) !important; }
+            #sidebar-overlay { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+{% set logueado = usuario is defined and usuario %}
+
+{% if logueado %}
+<!-- Overlay oscuro móvil -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-40 z-20 hidden"
+     onclick="cerrarSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-indigo-900 text-white flex flex-col z-30">
+    <div class="px-6 py-5 border-b border-indigo-700 flex items-center justify-between">
+        <img src="/static/gotuplas.png" alt="Logo" class="h-10 w-auto object-contain">
+        <button onclick="cerrarSidebar()" class="lg:hidden text-indigo-300 hover:text-white text-xl">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <a href="/dashboard"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if request.url.path == '/dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-gauge-high w-5"></i> Dashboard
+        </a>
+        <a href="/tickets/nuevo"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if request.url.path == '/tickets/nuevo' %}active{% endif %}">
+            <i class="fa-solid fa-plus w-5"></i> Nuevo Ticket
+        </a>
+        <a href="/perfil"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if request.url.path == '/perfil' %}active{% endif %}">
+            <i class="fa-solid fa-user w-5"></i> Mi Perfil
+        </a>
+        {% if usuario.rol in ['admin', 'agente'] %}
+        <div class="pt-4 pb-1 px-3 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Administración</div>
+        <a href="/dashboard/reportes"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if request.url.path == '/dashboard/reportes' %}active{% endif %}">
+            <i class="fa-solid fa-chart-column w-5"></i> Reportes ITSM
+        </a>
+        {% endif %}
+        {% if usuario.rol == 'admin' %}
+        <a href="/admin/usuarios"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if '/admin/usuarios' in request.url.path %}active{% endif %}">
+            <i class="fa-solid fa-users w-5"></i> Usuarios
+        </a>
+        <a href="/admin/categorias"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-100 hover:bg-indigo-700 transition {% if '/admin/categorias' in request.url.path %}active{% endif %}">
+            <i class="fa-solid fa-tags w-5"></i> Categorías
+        </a>
+        {% endif %}
+    </nav>
+    <div class="px-4 py-4 border-t border-indigo-700">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-sm shrink-0">
+                {{ usuario.nombre[0]|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ usuario.nombre }}</p>
+                <p class="text-xs text-indigo-300 truncate">{{ rol }}</p>
+            </div>
+        </div>
+        <form method="post" action="/logout">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+            <button type="submit" class="flex items-center gap-2 text-indigo-300 hover:text-white text-sm transition">
+                <i class="fa-solid fa-power-off"></i> Cerrar sesión
+            </button>
+        </form>
+    </div>
+</aside>
+
+<!-- Barra superior móvil -->
+<header class="lg:hidden fixed top-0 left-0 right-0 z-10 bg-indigo-900 text-white flex items-center justify-between px-4 py-3 shadow">
+    <button onclick="abrirSidebar()" class="text-white text-xl">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <img src="/static/gotuplas.png" alt="Logo" class="h-8 w-auto object-contain">
+    <a href="/tickets/nuevo" class="text-indigo-200 hover:text-white">
+        <i class="fa-solid fa-plus text-xl"></i>
+    </a>
+</header>
+{% endif %}
+
+<!-- Contenido — único bloque, sin duplicar -->
+<div class="{% if logueado %}lg:ml-64 pt-16 lg:pt-0{% endif %} min-h-screen">
+    <div class="{% if logueado %}p-4 lg:p-6{% endif %}">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+{% if logueado %}
+<script>
+function abrirSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-overlay').classList.remove('hidden');
+}
+function cerrarSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.add('hidden');
+}
+document.querySelectorAll('#sidebar a').forEach(a => {
+    a.addEventListener('click', () => {
+        if (window.innerWidth < 1024) cerrarSidebar();
+    });
+});
+</script>
+{% endif %}
+
+</body>
+</html>

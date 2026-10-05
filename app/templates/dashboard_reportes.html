@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Reportes ITSM — Help Desk{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard de reportes ITSM</h1>
+        <p class="text-sm text-gray-500 mt-1">Indicadores generales de tickets y desempeño del servicio.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tiempo promedio de resolución</p>
+            <p class="text-3xl font-bold text-gray-800 mt-2">
+                {% if promedio_resolucion is not none %}{{ "%.1f"|format(promedio_resolucion) }} h{% else %}—{% endif %}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">Basado en {{ cantidad_resueltos }} tickets con fecha de resolución.</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">SLA resueltos en menos de 24 h</p>
+            <p class="text-3xl font-bold text-gray-800 mt-2">
+                {% if porcentaje_sla is not none %}{{ "%.1f"|format(porcentaje_sla) }}%{% else %}—{% endif %}
+            </p>
+            <p class="text-xs text-gray-500 mt-1">Sobre {{ cantidad_resueltos }} tickets con fecha de resolución.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+        <section class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-4">Tickets por categoría</h2>
+            {% if categorias %}
+            <div class="h-64 mb-5"><canvas id="categoriasChart" aria-label="Tickets por categoría" role="img"></canvas></div>
+            {% endif %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-xs uppercase text-gray-500 border-b">
+                        <tr><th class="py-2 text-left">Categoría</th><th class="py-2 text-right">Tickets</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for categoria in categorias %}
+                        <tr>
+                            <td class="py-2 text-gray-700">{{ categoria.nombre }}</td>
+                            <td class="py-2 text-right font-medium text-gray-800">{{ categoria.total }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="py-4 text-center text-gray-500">No hay tickets registrados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-4">Volumen de casos por día · últimos 30 días</h2>
+            <div class="h-80"><canvas id="volumenChart" aria-label="Volumen de casos por día" role="img"></canvas></div>
+        </section>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        <section class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-4">Tickets por estado</h2>
+            <div class="h-64"><canvas id="estadosChart" aria-label="Tickets por estado" role="img"></canvas></div>
+        </section>
+        <section class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-4">Tickets por prioridad</h2>
+            <div class="h-64"><canvas id="prioridadesChart" aria-label="Tickets por prioridad" role="img"></canvas></div>
+        </section>
+        <section class="bg-white rounded-xl shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-4">Tickets por agente asignado</h2>
+            <div class="max-h-64 overflow-y-auto">
+                <table class="w-full text-sm">
+                    <thead class="text-xs uppercase text-gray-500 border-b">
+                        <tr><th class="py-2 text-left">Agente</th><th class="py-2 text-right">Tickets</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for agente in agentes %}
+                        <tr>
+                            <td class="py-2 text-gray-700">{{ agente.nombre }}</td>
+                            <td class="py-2 text-right font-medium text-gray-800">{{ agente.total }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="py-4 text-center text-gray-500">No hay agentes registrados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+const colores = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
+const opcionesEjes = {responsive: true, maintainAspectRatio: false};
+
+{% if categorias %}
+new Chart(document.getElementById('categoriasChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ categorias|map(attribute='nombre')|list|tojson }},
+        datasets: [{label: 'Tickets', data: {{ categorias|map(attribute='total')|list|tojson }}, backgroundColor: colores}]
+    },
+    options: {...opcionesEjes, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}
+});
+{% endif %}
+
+new Chart(document.getElementById('volumenChart'), {
+    type: 'line',
+    data: {
+        labels: {{ fechas_volumen|tojson }},
+        datasets: [{label: 'Casos creados', data: {{ volumen_diario|tojson }}, borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.12)', fill: true, tension: 0.3}]
+    },
+    options: {...opcionesEjes, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}
+});
+
+new Chart(document.getElementById('estadosChart'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ estados.keys()|list|tojson }},
+        datasets: [{data: {{ estados.values()|list|tojson }}, backgroundColor: colores}]
+    },
+    options: {...opcionesEjes, plugins: {legend: {position: 'bottom'}}}
+});
+
+new Chart(document.getElementById('prioridadesChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ prioridades.keys()|list|tojson }},
+        datasets: [{label: 'Tickets', data: {{ prioridades.values()|list|tojson }}, backgroundColor: colores}]
+    },
+    options: {...opcionesEjes, indexAxis: 'y', scales: {x: {beginAtZero: true, ticks: {precision: 0}}}}
+});
+</script>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Ticket — Help Desk{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <a href="/dashboard" class="text-indigo-500 hover:text-indigo-700 text-sm">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Volver al dashboard
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800 mt-2">Nuevo Ticket</h1>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-5 flex items-center gap-2">
+        <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <form method="post" action="/tickets/nuevo" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Título <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="titulo" required autofocus maxlength="200"
+                       class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                       placeholder="Describe brevemente el problema">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción <span class="text-red-500">*</span>
+                </label>
+                <textarea name="descripcion" required rows="5"
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"
+                          placeholder="Explica el problema con el mayor detalle posible..."></textarea>
+            </div>
+
+            <div class="{% if usuario.rol in ['admin', 'agente'] %}grid grid-cols-2 gap-4{% endif %}">
+                {% if usuario.rol in ['admin', 'agente'] %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                    <select name="prioridad"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        {% for p in prioridades %}
+                        <option value="{{ p }}" {% if p == 'media' %}selected{% endif %}>{{ p|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                    <select name="categoria_id"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        <option value="">Sin categoría</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Adjuntos -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Archivos adjuntos <span class="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg px-4 py-5 text-center hover:border-indigo-400 transition cursor-pointer"
+                     onclick="document.getElementById('archivos').click()">
+                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-400 mb-2"></i>
+                    <p class="text-sm text-gray-500">Haz clic para seleccionar archivos</p>
+                    <p class="text-xs text-gray-400 mt-1">Imágenes, PDF, Word, Excel — máx. 10 MB por archivo</p>
+                    <input type="file" id="archivos" name="archivos" multiple class="hidden"
+                           accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                           onchange="mostrarArchivos(this)">
+                </div>
+                <div id="lista-archivos" class="mt-2 space-y-1"></div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Ticket
+                </button>
+                <a href="/dashboard"
+                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-2.5 rounded-lg transition">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function mostrarArchivos(input) {
+    const lista = document.getElementById('lista-archivos');
+    lista.innerHTML = '';
+    Array.from(input.files).forEach(f => {
+        const kb = (f.size / 1024).toFixed(1);
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded px-3 py-1.5';
+        div.innerHTML = `<i class="fa-solid fa-paperclip text-indigo-400"></i> ${f.name} <span class="text-gray-400 text-xs">(${kb} KB)</span>`;
+        lista.appendChild(div);
+    });
+}
+</script>
+{% endblock %}
