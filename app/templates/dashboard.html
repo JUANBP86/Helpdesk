@@ -1,52 +1,196 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Help Desk{% endblock %}
-{% block extra_head %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block extra_head %}
+<style>
+    #operations-dashboard { color: #203436; }
+    #operations-dashboard .eyebrow {
+        color: #087f78;
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+    #operations-dashboard .page-title {
+        color: #203436;
+        font-size: clamp(1.7rem, 3vw, 2.25rem);
+        font-weight: 750;
+        letter-spacing: -.045em;
+        line-height: 1.08;
+    }
+    #operations-dashboard .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid #e5e9e5;
+        border-radius: 1rem;
+        background: #e5e9e5;
+        box-shadow: 0 8px 28px rgba(32, 52, 54, .045);
+    }
+    #operations-dashboard .metric-card {
+        min-height: 118px;
+        padding: 1.2rem 1.35rem;
+        background: #fff;
+    }
+    #operations-dashboard .metric-label {
+        color: #758183;
+        font-size: .68rem;
+        font-weight: 750;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+    }
+    #operations-dashboard .metric-value {
+        margin-top: .55rem;
+        color: #203436;
+        font-size: 2rem;
+        font-weight: 750;
+        letter-spacing: -.05em;
+        line-height: 1;
+    }
+    #operations-dashboard .metric-card.is-open .metric-value { color: #087f78; }
+    #operations-dashboard .metric-card.is-progress .metric-value { color: #b7791f; }
+    #operations-dashboard .metric-card.is-done .metric-value { color: #31836b; }
+    #operations-dashboard .filter-panel,
+    #operations-dashboard .queue-panel {
+        border: 1px solid #e5e9e5;
+        border-radius: 1rem;
+        background: #fff;
+        box-shadow: 0 8px 28px rgba(32, 52, 54, .045);
+    }
+    #operations-dashboard .filter-panel { padding: 1rem 1.15rem; }
+    #operations-dashboard .filter-panel label { color: #647274; font-weight: 650; }
+    #operations-dashboard .filter-panel input,
+    #operations-dashboard .filter-panel select {
+        min-height: 2.65rem;
+        border-color: #dfe5e1;
+        border-radius: .65rem;
+        background-color: #fbfcfa;
+    }
+    #operations-dashboard .queue-heading { border-color: #e9eeea; }
+    #operations-dashboard table thead { background: #f6f8f5; }
+    #operations-dashboard table th {
+        color: #788486;
+        font-size: .65rem;
+        font-weight: 750;
+        letter-spacing: .08em;
+    }
+    #operations-dashboard table tbody tr:hover { background: #f4f8f5; }
+    #operations-dashboard .ticket-title { color: #203436; font-weight: 650; }
+    @media (max-width: 900px) {
+        #operations-dashboard .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+        #operations-dashboard .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #operations-dashboard .metric-card { min-height: 102px; padding: 1rem; }
+        #operations-dashboard .metric-value { font-size: 1.75rem; }
+    }
+</style>
+<script>
+    // Refresco inteligente: no recarga si el usuario está interactuando o escribiendo
+    let timerRefresco;
+    let interactuando = false;
+
+    function iniciarTemporizadorRefresco() {
+        clearTimeout(timerRefresco);
+        timerRefresco = setTimeout(() => {
+            if (!interactuando) {
+                location.reload();
+            } else {
+                iniciarTemporizadorRefresco();
+            }
+        }, 45000); // 45 segundos
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const elementosEntrada = document.querySelectorAll('input, select, textarea');
+        elementosEntrada.forEach(el => {
+            el.addEventListener('focus', () => { interactuando = true; });
+            el.addEventListener('blur', () => {
+                setTimeout(() => { interactuando = false; }, 3000);
+            });
+            el.addEventListener('input', () => { interactuando = true; });
+        });
+        iniciarTemporizadorRefresco();
+    });
+</script>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div id="operations-dashboard" class="max-w-7xl mx-auto">
 
-    <!-- Encabezado -->
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
-        {% if usuario.rol == 'usuario' %}
-        <p class="text-gray-500 text-sm mt-1">Bienvenido, {{ usuario.nombre }} — aquí puedes ver y hacer seguimiento de tus tickets</p>
-        {% else %}
-        <p class="text-gray-500 text-sm mt-1">Bienvenido, {{ usuario.nombre }}</p>
-        {% endif %}
+    <div class="mb-7 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+            <p class="eyebrow mb-2">Gotuplas · Centro de operaciones</p>
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="page-title">Centro de soporte</h1>
+                <span class="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-gray-200 px-2.5 py-1 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    En línea
+                </span>
+            </div>
+            {% if usuario.rol == 'usuario' %}
+            <p class="text-gray-500 text-sm mt-2">Hola {{ usuario.nombre }}, consulta aquí el estado y avance de tus solicitudes.</p>
+            {% else %}
+            <p class="text-gray-500 text-sm mt-2">Hola {{ usuario.nombre }}, esta es la actividad actual de la mesa de ayuda.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="location.reload()"
+                    class="text-sm text-gray-600 hover:text-teal-800 bg-white hover:bg-teal-50 border border-gray-200 px-3.5 py-2.5 rounded-lg transition inline-flex items-center gap-2"
+                    title="Actualizar ahora">
+                <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+            </button>
+            {% if usuario.rol in ['admin', 'agente'] %}
+            <a href="/tickets/exportar/csv?estado={{ filtro_estado or '' }}&prioridad={{ filtro_prioridad or '' }}&categoria_id={{ filtro_categoria or '' }}&agente_id={{ filtro_agente or '' }}&buscar={{ buscar or '' }}"
+               download
+               class="bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 text-sm font-semibold px-4 py-2.5 rounded-lg transition inline-flex items-center gap-2"
+               title="Exportar la lista actual a formato Excel (.csv)">
+                <i class="fa-solid fa-file-excel"></i> Exportar a Excel
+            </a>
+            {% endif %}
+            <a href="/tickets/nuevo"
+               class="bg-teal-800 hover:bg-teal-900 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition inline-flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-plus"></i> Nuevo Ticket
+            </a>
+        </div>
     </div>
 
-    <!-- Tarjetas de estadísticas -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</p>
-            <p class="text-3xl font-bold text-gray-800 mt-1">{{ stats.total }}</p>
+    <div class="metric-grid mb-7">
+        <div class="metric-card">
+            <p class="metric-label">Total de tickets</p>
+            <p class="metric-value">{{ stats.total }}</p>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Abiertos</p>
-            <p class="text-3xl font-bold text-blue-600 mt-1">{{ stats.abiertos }}</p>
+        <div class="metric-card is-open">
+            <p class="metric-label">Abiertos</p>
+            <p class="metric-value">{{ stats.abiertos }}</p>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">En Proceso</p>
-            <p class="text-3xl font-bold text-yellow-600 mt-1">{{ stats.en_proceso }}</p>
+        <div class="metric-card is-progress">
+            <p class="metric-label">En proceso</p>
+            <p class="metric-value">{{ stats.en_proceso }}</p>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resueltos</p>
-            <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.resueltos }}</p>
+        <div class="metric-card is-done">
+            <p class="metric-label">Resueltos</p>
+            <p class="metric-value">{{ stats.resueltos }}</p>
+        </div>
+        <div class="metric-card">
+            <p class="metric-label">Cerrados</p>
+            <p class="metric-value">{{ stats.cerrados }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ "%.1f"|format(stats.porcentaje_cerrados) }}% del total</p>
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="bg-white rounded-xl shadow-sm p-4 mb-5">
+    <div class="filter-panel mb-5">
         <form method="get" action="/dashboard" class="flex flex-wrap gap-3 items-end">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Buscar</label>
                 <input type="text" name="buscar" value="{{ buscar }}"
                        placeholder="Buscar por título..."
-                       class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-52">
+                       class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-48 sm:w-56">
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Estado</label>
-                <select name="estado" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <select name="estado" class="select-with-arrow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
                     <option value="">Todos</option>
                     {% for e in estados %}
                     <option value="{{ e }}" {% if filtro_estado == e %}selected{% endif %}>{{ e|replace('_',' ')|title }}</option>
@@ -55,40 +199,67 @@
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Prioridad</label>
-                <select name="prioridad" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <select name="prioridad" class="select-with-arrow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
                     <option value="">Todas</option>
                     {% for p in prioridades %}
                     <option value="{{ p }}" {% if filtro_prioridad == p %}selected{% endif %}>{{ p|title }}</option>
                     {% endfor %}
                 </select>
             </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
+                <select name="categoria_id" class="select-with-arrow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                    <option value="">Todas</option>
+                    {% for cat in categorias %}
+                    <option value="{{ cat.id }}" {% if filtro_categoria == cat.id %}selected{% endif %}>{{ cat.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if usuario.rol in ['admin', 'agente'] and agentes %}
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Asignado a</label>
+                <select name="agente_id" class="select-with-arrow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white">
+                    <option value="">Todos</option>
+                    <option value="sin_asignar" {% if filtro_agente == 'sin_asignar' %}selected{% endif %}>— Sin asignar —</option>
+                    {% for a in agentes %}
+                    <option value="{{ a.id }}" {% if filtro_agente == a.id|string %}selected{% endif %}>{{ a.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
             <button type="submit"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
-                <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                    class="bg-teal-800 hover:bg-teal-900 text-white text-sm font-semibold px-4 py-2 rounded-lg transition inline-flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-filter"></i> Filtrar
             </button>
-            <a href="/dashboard" class="text-gray-500 hover:text-gray-700 text-sm py-2 px-2 transition">
-                <i class="fa-solid fa-xmark mr-1"></i> Limpiar
+            <a href="/dashboard" class="text-gray-500 hover:text-teal-800 text-sm py-2 px-2 transition inline-flex items-center gap-1">
+                <i class="fa-solid fa-xmark"></i> Limpiar
             </a>
         </form>
     </div>
 
     <!-- Leyenda alertas tiempo -->
     {% if usuario.rol in ['admin', 'agente'] %}
-    <div class="flex gap-4 mb-3 text-xs text-gray-500">
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Más de 24h sin atención</span>
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> Entre 12h y 24h</span>
-        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Menos de 12h</span>
+    <div class="flex flex-wrap gap-4 mb-3 text-xs text-gray-500">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Más de 24h sin atención</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> Entre 12h y 24h</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span> Menos de 12h</span>
     </div>
     {% endif %}
 
     <!-- Tabla de tickets -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b">
-            <h2 class="font-semibold text-gray-700">Tickets <span class="text-gray-400 font-normal text-sm">({{ tickets|length }})</span></h2>
-            <a href="/tickets/nuevo"
-               class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
-                <i class="fa-solid fa-plus mr-1"></i> Nuevo
-            </a>
+    <div class="queue-panel overflow-hidden">
+        <div class="queue-heading flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-5 py-4 border-b">
+            <div>
+                <p class="eyebrow mb-1">Seguimiento</p>
+                <h2 class="font-semibold text-gray-800">
+                    Cola de tickets
+                    <span class="text-gray-400 font-normal text-sm">· {{ total_filtrados }} resultados</span>
+                </h2>
+            </div>
+            <div class="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-3 py-1.5">
+                Página {{ pagina }} de {{ total_paginas }}
+            </div>
         </div>
 
         {% if tickets %}
@@ -98,9 +269,10 @@
                     <tr>
                         <th class="px-5 py-3 text-left w-8"></th>
                         <th class="px-5 py-3 text-left">#</th>
-                        <th class="px-5 py-3 text-left">Título</th>
+                        <th class="px-5 py-3 text-left">Título y Categoría</th>
                         <th class="px-5 py-3 text-left">Estado</th>
                         <th class="px-5 py-3 text-left">Prioridad</th>
+                        <th class="px-5 py-3 text-left">Primera respuesta</th>
                         {% if usuario.rol in ['admin', 'agente'] %}
                         <th class="px-5 py-3 text-left">Solicitante</th>
                         <th class="px-5 py-3 text-left">Asignado a</th>
@@ -126,10 +298,22 @@
                             {% endif %}
                         </td>
                         <td class="px-5 py-3 text-gray-400 font-mono">#{{ t.id }}</td>
-                        <td class="px-5 py-3 font-medium text-gray-800 max-w-xs truncate">
-                            {{ t.titulo }}
-                            {% if t.adjuntos %}
-                            <i class="fa-solid fa-paperclip text-gray-400 text-xs ml-1"></i>
+                        <td class="px-5 py-3 max-w-xs">
+                            <div class="ticket-title truncate">
+                                {{ t.titulo }}
+                                {% if t.adjuntos %}
+                                <i class="fa-solid fa-paperclip text-gray-400 text-xs ml-1" title="Tiene archivos adjuntos"></i>
+                                {% endif %}
+                            </div>
+                            {% if t.categoria %}
+                            <span class="inline-block text-[11px] px-2 py-0.5 rounded font-medium mt-1"
+                                  style="background-color: {{ t.categoria.color }}20; color: {{ t.categoria.color }};">
+                                {{ t.categoria.nombre }}
+                            </span>
+                            {% else %}
+                            <span class="inline-block text-[11px] px-2 py-0.5 rounded font-medium mt-1 bg-gray-100 text-gray-500">
+                                Sin categoría
+                            </span>
                             {% endif %}
                         </td>
                         <td class="px-5 py-3">
@@ -142,9 +326,35 @@
                                 {{ t.prioridad|title }}
                             </span>
                         </td>
+                        <td class="px-5 py-3 text-xs">
+                            {% if t.primera_respuesta_en %}
+                                {% if t._sla_respuesta.cumplido %}
+                                <span class="text-green-700 font-medium">Respondido en {{ "%.1f"|format(t._sla_respuesta.horas_transcurridas) }} h · En SLA</span>
+                                {% else %}
+                                <span class="text-red-700 font-medium">Respondido en {{ "%.1f"|format(t._sla_respuesta.horas_transcurridas) }} h · Fuera de SLA</span>
+                                {% endif %}
+                            {% elif t.estado in ['resuelto', 'cerrado'] %}
+                            <span class="text-gray-500">Finalizado sin primera respuesta</span>
+                            {% elif t._sla_respuesta.vencido %}
+                            <span class="text-red-700 font-semibold">SLA vencido · {{ "%.1f"|format(t._sla_respuesta.horas_transcurridas - t._sla_respuesta.limite_horas) }} h</span>
+                            {% else %}
+                            <span class="text-teal-800">Restan {{ "%.1f"|format(t._sla_respuesta.horas_restantes) }} h de {{ t._sla_respuesta.limite_horas }} h</span>
+                            {% endif %}
+                        </td>
                         {% if usuario.rol in ['admin', 'agente'] %}
-                        <td class="px-5 py-3 text-gray-600">{{ t.creador.nombre }}</td>
-                        <td class="px-5 py-3 text-gray-600">{{ t.agente.nombre if t.agente else '—' }}</td>
+                        <td class="px-5 py-3 text-gray-600">
+                            {{ t.creador.nombre }}
+                            {% if t.creador.area %}
+                            <span class="block text-xs text-gray-400">{{ t.creador.area }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3 text-gray-600">
+                            {% if t.agente %}
+                                {{ t.agente.nombre }}
+                            {% else %}
+                                <span class="text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded text-xs">Sin asignar</span>
+                            {% endif %}
+                        </td>
                         <td class="px-5 py-3 text-gray-500 text-xs">
                             {% if t.estado in ['abierto', 'en_proceso'] %}
                                 {% if horas >= 24 %}
@@ -161,12 +371,54 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginación -->
+        {% if total_paginas > 1 %}
+        <div class="px-5 py-3.5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-600 bg-gray-50">
+            <div>
+                Mostrando página <span class="font-semibold text-gray-800">{{ pagina }}</span> de <span class="font-semibold text-gray-800">{{ total_paginas }}</span>
+                <span class="text-gray-400">({{ total_filtrados }} tickets en total)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                {% if pagina > 1 %}
+                <a href="/dashboard?pagina={{ pagina - 1 }}&estado={{ filtro_estado or '' }}&prioridad={{ filtro_prioridad or '' }}&categoria_id={{ filtro_categoria or '' }}&agente_id={{ filtro_agente or '' }}&buscar={{ buscar or '' }}"
+                   class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-xs font-medium transition flex items-center gap-1 shadow-sm">
+                    <i class="fa-solid fa-chevron-left"></i> Anterior
+                </a>
+                {% else %}
+                <span class="px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-medium text-gray-400 cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left"></i> Anterior
+                </span>
+                {% endif %}
+
+                <span class="px-3 py-1.5 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg text-xs font-semibold">
+                    {{ pagina }} / {{ total_paginas }}
+                </span>
+
+                {% if pagina < total_paginas %}
+                <a href="/dashboard?pagina={{ pagina + 1 }}&estado={{ filtro_estado or '' }}&prioridad={{ filtro_prioridad or '' }}&categoria_id={{ filtro_categoria or '' }}&agente_id={{ filtro_agente or '' }}&buscar={{ buscar or '' }}"
+                   class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-xs font-medium transition flex items-center gap-1 shadow-sm">
+                    Siguiente <i class="fa-solid fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <span class="px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-medium text-gray-400 cursor-not-allowed">
+                    Siguiente <i class="fa-solid fa-chevron-right"></i>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {% else %}
         <div class="text-center py-16 text-gray-400">
-            <i class="fa-solid fa-ticket text-5xl mb-3"></i>
-            <p class="text-lg">No hay tickets</p>
+            <i class="fa-solid fa-ticket text-5xl mb-3 text-gray-300"></i>
+            <p class="text-lg text-gray-600 font-medium">No se encontraron tickets</p>
             <p class="text-sm mt-1">
-                <a href="/tickets/nuevo" class="text-indigo-500 hover:underline">Crea el primero</a>
+                {% if filtro_estado or filtro_prioridad or filtro_categoria or filtro_agente or buscar %}
+                Intenta ajustando los filtros de búsqueda o haz clic en <a href="/dashboard" class="text-teal-800 hover:underline">Limpiar</a>.
+                {% else %}
+                <a href="/tickets/nuevo" class="text-teal-800 hover:underline">Crea el primer ticket</a>
+                {% endif %}
             </p>
         </div>
         {% endif %}
